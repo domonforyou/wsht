@@ -35,7 +35,6 @@ bool auth_server_request(const char* get_url, pstr_t *response, W_remote_conf *r
   CURL *curl_handle;
   CURLcode res;
   bool is_ok=false;
-  char *retval=NULL;
 
   curl_global_init(CURL_GLOBAL_ALL);
   /* init the curl session */ 
@@ -63,9 +62,8 @@ bool auth_server_request(const char* get_url, pstr_t *response, W_remote_conf *r
      *
      * Do something nice with it!
      */ 
-    //retval = pstr_to_string(response);
     is_ok=true;
-    debug(LOG_DEBUG, "HTTP Response from Server: [%s]", retval);
+    debug(LOG_DEBUG, "HTTP Response from Server: [%s]", response->buf);
   }
   /* cleanup curl stuff */ 
   curl_easy_cleanup(curl_handle);
