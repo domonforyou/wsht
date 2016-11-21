@@ -34,10 +34,10 @@
 /** Defaults configuration values */
 #ifndef SYSCONFDIR
 #define DEFAULT_CONFIGFILE "./wsht.conf"
-#define DEFAULT_HTMLMSGFILE "/etc/wifidog-msg.html"
+#define DEFAULT_HTMLMSGFILE "/etc/wsht-msg.html"
 #else
-#define DEFAULT_CONFIGFILE SYSCONFDIR"/wifidog.conf"
-#define DEFAULT_HTMLMSGFILE SYSCONFDIR"/wifidog-msg.html"
+#define DEFAULT_CONFIGFILE SYSCONFDIR"/wsht.conf"
+#define DEFAULT_HTMLMSGFILE SYSCONFDIR"/wsht-msg.html"
 #endif
 #define DEFAULT_DAEMON 1
 #define DEFAULT_DEBUGLEVEL LOG_INFO
@@ -49,8 +49,8 @@
 #define DEFAULT_CHECKINTERVAL 60
 #define DEFAULT_LOG_SYSLOG 0
 #define DEFAULT_SYSLOG_FACILITY LOG_DAEMON
-#define DEFAULT_WDCTL_SOCK "/tmp/wdctl.sock"
-#define DEFAULT_INTERNAL_SOCK "/tmp/wifidog.sock"
+#define DEFAULT_WDCTL_SOCK "/tmp/wshtctl.sock"
+#define DEFAULT_INTERNAL_SOCK "/tmp/wsht.sock"
 #define DEFAULT_AUTHSERVPORT 80
 #define DEFAULT_AUTHSERVSSLPORT 443
 /** Note that DEFAULT_AUTHSERVSSLAVAILABLE must be 0 or 1, even if the config file syntax is yes or no */

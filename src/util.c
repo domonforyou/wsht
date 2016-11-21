@@ -135,6 +135,39 @@ execute(const char *cmd_line, int quiet)
     }
 }
 
+/** execute another process with no waiting its end, but record its pid
+ *  in: cmd_line == "complete cmd including the paras"
+ *  in: quiet: whether close the stderr (file descriptor 2) 
+ *  return: 
+ */
+int execute_without_waiting(const char *cmd_line, int quiet)
+{
+    int pid, status, rc;
+
+    const char *new_argv[4];
+    new_argv[0] = WD_SHELL_PATH;
+    new_argv[1] = "-c";
+    new_argv[2] = cmd_line;
+    new_argv[3] = NULL;
+
+    pid = safe_fork();
+    if (pid == 0) {             /* for the child process:         */
+        /* We don't want to see any errors if quiet flag is on */
+        if (quiet)
+            close(2);
+        if (execvp(WD_SHELL_PATH, (char *const *)new_argv) == -1) { /* execute the command  */
+            debug(LOG_ERR, "execvp(): %s", strerror(errno));
+        } else {
+            debug(LOG_ERR, "execvp() failed");
+        }
+        exit(1);
+    }
+
+    /* for the parent:      */
+    debug(LOG_DEBUG, "Forking a son, whose PID is %d", pid);
+    return pid;
+}
+
 struct in_addr *
 wd_gethostbyname(const char *name)
 {

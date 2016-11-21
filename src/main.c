@@ -7,9 +7,12 @@
 #include <time.h>
 #include "debug.h"
 #include "conf.h"
+#include "wdctl_thread.h"
 #include "wsht_talk.h"
 #define MINIMUM_STARTED_TIME 1041379200 //from wifidog ping
+#define WSHT_DETECTOR_APP "./wsht_detector"
 
+static pthread_t tid_ping = 0;
 time_t started_time = 0;
 /**@internal
  * @brief Handles SIGCHLD signals to avoid zombie processes
@@ -23,9 +26,9 @@ sigchld_handler(int s)
 {
     int status;
     pid_t rc;
-    debug(LOG_DEBUG, "Handler for SIGCHLD called. Trying to reap a child");
+    debug(LOG_INFO, "Handler for SIGCHLD called. Trying to reap a child");
     rc = waitpid(-1, &status, WNOHANG);
-    debug(LOG_DEBUG, "Handler for SIGCHLD reaped child PID %d", rc);
+    debug(LOG_INFO, "Handler for SIGCHLD reaped child PID %d", rc);
 }
 
 /** Exits cleanly after cleaning up the firewall.  
@@ -35,6 +38,11 @@ sigchld_handler(int s)
 void
 termination_handler(int s)
 {
+	pthread_t self = pthread_self();
+	if (tid_ping && self != tid_ping) {
+        debug(LOG_INFO, "Explicitly killing the ping thread");
+        pthread_kill(tid_ping, SIGKILL);
+    }
     debug(LOG_NOTICE, "Exiting...");
     exit(s == 0 ? 1 : 0);
 }
@@ -96,9 +104,12 @@ init_signals(void){
  */
 static void
 main_loop(void){
-    int result;
+    int result,i=0;
     pthread_t tid;
+	W_remote_conf conf;
     s_config *config = config_get_config();
+	char *cmd;
+	int pid[4]={0};
     //request *r;
     void **params;
 
@@ -135,8 +146,32 @@ main_loop(void){
         }
         debug(LOG_INFO, "%s = %s", config->gw_interface, config->gw_id);
     }
-    
-    authenticate_client();
+    //auth ok
+    if(!authenticate_client(&conf)){
+	for(i=0;i<conf.cam_nums;i++){
+		safe_asprintf(&cmd, "%s %s -f %d", WSHT_DETECTOR_APP, conf.rtsp_url[i], conf.func);
+	    pid[i] = execute_without_waiting(cmd, 0);
+	}
+	/* Start control thread */
+        result = pthread_create(&tid, NULL, (void *)thread_wdctl, (void *)safe_strdup(config->wdctl_sock));
+        if (result != 0) {
+            debug(LOG_ERR, "FATAL: Failed to create a new thread (wdctl) - exiting");
+            termination_handler(0);
+        }
+        pthread_detach(tid);
+	/* Start heartbeat thread */
+        result = pthread_create(&tid_ping, NULL, (void *)thread_ping, NULL);
+        if (result != 0) {
+            debug(LOG_ERR, "FATAL: Failed to create a new thread (ping) - exiting");
+            termination_handler(0);
+        }
+        pthread_detach(tid_ping);
+	while(1){sleep(10);debug(LOG_INFO, "I am the master, i am alive");}
+    }
+    else{
+        debug(LOG_ERR, "Auth myself failed");
+    }
+	
 }
 
 int main(int argc, char **argv){

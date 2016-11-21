@@ -1,6 +1,12 @@
 #ifndef _WSHT_TALK_H_
 #define _WSHT_TALK_H_
 
+#define DEFAULT_RTSP_STATUS 0x0F
+#define DEFAULT_VPU_STATUS 0x0F
+#define DEFAULT_DETECT_STATUS 0x0F
+#define DEFAULT_INFO_IMAGE_PATH "/tmp/wsht/info.jpg"
+#define DEFAULT_WARNING_IMAGE_PATH "/tmp/wsht/warning.jpg"
+
 typedef enum{
    FallDown_Detection=0,
    Fire_Detection,
@@ -35,6 +41,17 @@ typedef struct _remote_conf{
     char rtsp_url[4][256];
 }W_remote_conf;
 
-
-void authenticate_client();
+typedef struct _local_infos{
+	unsigned long int sys_uptime;
+	unsigned int sys_memfree;
+	float sys_load;
+	unsigned int rtsp_status;
+	unsigned int vpu_status;
+	unsigned int detect_status;
+	char *device_id;
+	char *image_path;
+}W_local_infos;
+//auth myself
+int authenticate_client(W_remote_conf *ret_conf);
+void thread_ping(void *arg);
 #endif
