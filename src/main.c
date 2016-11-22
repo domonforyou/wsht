@@ -3,16 +3,21 @@
 #include <syslog.h>
 #include <pthread.h>
 #include <signal.h>
+#include <string.h>
 #include <errno.h>
 #include <time.h>
 #include "debug.h"
 #include "conf.h"
+#include "util.h"
 #include "wdctl_thread.h"
 #include "wsht_talk.h"
 #define MINIMUM_STARTED_TIME 1041379200 //from wifidog ping
+#define P_NUMS 4
 #define WSHT_DETECTOR_APP "./wsht_detector"
 
 static pthread_t tid_ping = 0;
+static W_process_info p_infos[P_NUMS]={0};
+static int p_status = 0;
 time_t started_time = 0;
 /**@internal
  * @brief Handles SIGCHLD signals to avoid zombie processes
@@ -24,11 +29,18 @@ time_t started_time = 0;
 void
 sigchld_handler(int s)
 {
-    int status;
+    int i,status;
     pid_t rc;
     debug(LOG_INFO, "Handler for SIGCHLD called. Trying to reap a child");
     rc = waitpid(-1, &status, WNOHANG);
     debug(LOG_INFO, "Handler for SIGCHLD reaped child PID %d", rc);
+    p_status = 1;    
+    for(i=0;i<P_NUMS;i++){
+	if(rc == p_infos[i].pid){
+	    debug(LOG_INFO, "Child %d Is Dead", rc);
+            p_infos[i].pid = -1;
+	}
+    }
 }
 
 /** Exits cleanly after cleaning up the firewall.  
@@ -106,10 +118,10 @@ static void
 main_loop(void){
     int result,i=0;
     pthread_t tid;
-	W_remote_conf conf;
+    W_remote_conf conf;
     s_config *config = config_get_config();
-	char *cmd;
-	int pid[4]={0};
+    char *cmd;
+    int pid[4]={0};
     //request *r;
     void **params;
 
@@ -149,8 +161,9 @@ main_loop(void){
     //auth ok
     if(!authenticate_client(&conf)){
 	for(i=0;i<conf.cam_nums;i++){
-		safe_asprintf(&cmd, "%s %s -f %d", WSHT_DETECTOR_APP, conf.rtsp_url[i], conf.func);
-	    pid[i] = execute_without_waiting(cmd, 0);
+            safe_asprintf(&cmd, "%s %s -f %d", WSHT_DETECTOR_APP, conf.rtsp_url[i], conf.func);
+	    p_infos[i].pid = execute_without_waiting(cmd, 0);
+            strcpy(p_infos[i].cmd, cmd);
 	}
 	/* Start control thread */
         result = pthread_create(&tid, NULL, (void *)thread_wdctl, (void *)safe_strdup(config->wdctl_sock));
@@ -166,7 +179,20 @@ main_loop(void){
             termination_handler(0);
         }
         pthread_detach(tid_ping);
-	while(1){sleep(10);debug(LOG_INFO, "I am the master, i am alive");}
+	while(1){
+            sleep(30);
+            debug(LOG_INFO, "I am the master, i am alive");
+            if(p_status){
+		p_status=0;
+    		for(i=0;i<P_NUMS;i++){
+		    if(-1 == p_infos[i].pid){
+	    	    	debug(LOG_INFO, "Child : %s", p_infos[i].cmd);
+            	    	p_infos[i].pid = execute_without_waiting(p_infos[i].cmd, 0);
+		        sleep(10);
+		    }
+    		}
+	    }
+        }
     }
     else{
         debug(LOG_ERR, "Auth myself failed");

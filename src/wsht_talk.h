@@ -53,5 +53,6 @@ typedef struct _local_infos{
 }W_local_infos;
 //auth myself
 int authenticate_client(W_remote_conf *ret_conf);
+void post_warning(void);
 void thread_ping(void *arg);
 #endif

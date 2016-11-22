@@ -443,6 +443,87 @@ static void ping(void)
     if(res)free(res);
 }
 
+
+/** @internal
+ * This function does the actual request.
+ */
+void post_warning(void)
+{
+    char request[MAX_BUF];
+    FILE *fh;
+    W_local_infos infos;
+    unsigned long int sys_uptime = 0;
+    unsigned int sys_memfree = 0;
+    unsigned int rtsp_status,vpu_status,detect_status;
+    float sys_load = 0;
+    char *image_path=NULL;
+    //pstr need to be freed
+    pstr_t *response = pstr_new();
+    char *res = NULL; // ----> pstr_t-->buf above, needed to be free 
+
+    t_auth_serv *auth_server = NULL;
+    auth_server = get_auth_server();
+    s_config *config = config_get_config();
+    static int authdown = 0;
+
+	//init to default
+    rtsp_status=DEFAULT_RTSP_STATUS;
+    vpu_status=DEFAULT_VPU_STATUS;
+    detect_status=DEFAULT_DETECT_STATUS;
+    image_path=DEFAULT_WARNING_IMAGE_PATH;
+	
+    debug(LOG_DEBUG, "Entering warning()");
+    memset(request, 0, sizeof(request));
+    /*
+     * Populate uptime, memfree and load
+     */
+    if ((fh = fopen("/proc/uptime", "r"))) {
+        if (fscanf(fh, "%lu", &sys_uptime) != 1)
+            debug(LOG_CRIT, "Failed to read uptime");
+
+        fclose(fh);
+    }
+    if ((fh = fopen("/proc/meminfo", "r"))) {
+        while (!feof(fh)) {
+            if (fscanf(fh, "MemFree: %u", &sys_memfree) == 0) {
+                /* Not on this line */
+                while (!feof(fh) && fgetc(fh) != '\n') ;
+            } else {
+                /* Found it */
+                break;
+            }
+        }
+        fclose(fh);
+    }
+    if ((fh = fopen("/proc/loadavg", "r"))) {
+        if (fscanf(fh, "%f", &sys_load) != 1)
+            debug(LOG_CRIT, "Failed to read loadavg");
+
+        fclose(fh);
+    }
+	infos.sys_uptime = sys_uptime;
+	infos.sys_memfree = sys_memfree;
+	infos.sys_load = sys_load;
+	infos.rtsp_status = rtsp_status;
+	infos.vpu_status = vpu_status;
+	infos.detect_status = detect_status;
+	infos.device_id = config->gw_id;
+	infos.image_path = image_path;
+    snprintf(request, (sizeof(request) - 1),"http://%s%s%s",
+        auth_server->authserv_hostname,
+	auth_server->authserv_path,	
+        auth_server->authserv_ping_script_path_fragment);
+    debug(LOG_INFO, "Post infos === %s", request);    
+
+    if(post_server_warning(request, &infos, response)){
+        res = pstr_to_string(response);
+        debug(LOG_INFO, "Post warning to server successful, return: %s", res);
+    }
+    else{
+	debug(LOG_ERR, "Wshtctl thread says: Post warning to server wrong");
+    }
+    if(res)free(res);
+}
 /** Launches a thread that periodically checks in with the wifidog auth server to perform heartbeat function.
 @param arg NULL
 @todo This thread loops infinitely, need a watchdog to verify that it is still running?

@@ -34,6 +34,11 @@
  *  if it isn't up yet (interval in seconds) */
 #define EXT_INTERFACE_DETECT_RETRY_INTERVAL 1
 
+typedef struct _process_info_{
+    int pid;
+    char cmd[256];
+}W_process_info;
+
 /** @brief Execute a shell command */
 int execute(const char *, int);
 

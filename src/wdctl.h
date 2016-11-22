@@ -27,10 +27,10 @@
 #ifndef _WDCTL_H_
 #define _WDCTL_H_
 
-#define DEFAULT_SOCK	"/tmp/wdctl.sock"
+#define DEFAULT_SOCK	"/tmp/wshtctl.sock"
 
 #define WDCTL_UNDEF		0
-#define WDCTL_STATUS		1
+#define WDCTL_WARNING		1
 #define WDCTL_STOP		2
 #define WDCTL_KILL		3
 #define WDCTL_RESTART	4

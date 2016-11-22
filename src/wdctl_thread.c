@@ -197,7 +197,7 @@ thread_wdctl_handler(void *arg)
 
     if (strncmp(request, "warning", 7) == 0) {
         wdctl_status(fd);
-		post_server_warning();
+        post_warning();
     } else if (strncmp(request, "stop", 4) == 0) {
         wdctl_status(fd);
     } else if (strncmp(request, "reset", 5) == 0) {
@@ -240,11 +240,11 @@ wdctl_status(int fd)
     char *status = NULL;
     size_t len = 0;
 
-	status = "OK";
+    status = "OK";
     //status = get_status_text();
     len = strlen(status);
 
     write_to_socket(fd, status, len);   /* XXX Not handling error because we'd just print the same log line. */
 
-    free(status);
+    //free(status);
 }

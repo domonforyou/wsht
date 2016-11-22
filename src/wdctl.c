@@ -47,7 +47,7 @@ static void init_config(void);
 static void parse_commandline(int, char **);
 static int connect_to_server(const char *);
 static size_t send_request(int, const char *);
-static void wdctl_status(void);
+static void wdctl_warning(void);
 static void wdctl_stop(void);
 static void wdctl_reset(void);
 static void wdctl_restart(void);
@@ -68,7 +68,7 @@ usage(void)
     fprintf(stdout, "\n");
     fprintf(stdout, "commands:\n");
     fprintf(stdout, "  reset [mac|ip]    Reset the specified mac or ip connection\n");
-    fprintf(stdout, "  status            Obtain the status of wifidog\n");
+    fprintf(stdout, "  warning            Obtain the status of wifidog\n");
     fprintf(stdout, "  stop              Stop the running wifidog\n");
     fprintf(stdout, "  restart           Re-start the running wifidog (without disconnecting active users!)\n");
     fprintf(stdout, "\n");
@@ -122,8 +122,8 @@ parse_commandline(int argc, char **argv)
         exit(1);
     }
 
-    if (strcmp(*(argv + optind), "status") == 0) {
-        config.command = WDCTL_STATUS;
+    if (strcmp(*(argv + optind), "warning") == 0) {
+        config.command = WDCTL_WARNING;
     } else if (strcmp(*(argv + optind), "stop") == 0) {
         config.command = WDCTL_STOP;
     } else if (strcmp(*(argv + optind), "reset") == 0) {
@@ -187,7 +187,7 @@ send_request(int sock, const char *request)
 }
 
 static void
-wdctl_status(void)
+wdctl_warning(void)
 {
     int sock;
     char buffer[4096];
@@ -196,7 +196,7 @@ wdctl_status(void)
 
     sock = connect_to_server(config.socket);
 
-    strncpy(request, "status\r\n\r\n", 15);
+    strncpy(request, "warning\r\n\r\n", 15);
 
     send_request(sock, request);
 
@@ -291,8 +291,7 @@ wdctl_restart(void)
     close(sock);
 }
 
-int
-wdctl_main(int argc, char **argv)
+int wdctl_main(int argc, char **argv)
 {
 
     /* Init configuration */
@@ -300,8 +299,8 @@ wdctl_main(int argc, char **argv)
     parse_commandline(argc, argv);
 
     switch (config.command) {
-    case WDCTL_STATUS:
-        wdctl_status();
+    case WDCTL_WARNING:
+        wdctl_warning();
         break;
 
     case WDCTL_STOP:
