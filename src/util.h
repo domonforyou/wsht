@@ -37,6 +37,7 @@
 typedef struct _process_info_{
     int pid;
     char cmd[256];
+    int errcode;
 }W_process_info;
 
 /** @brief Execute a shell command */

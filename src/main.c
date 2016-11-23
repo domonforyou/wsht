@@ -18,6 +18,7 @@
 static pthread_t tid_ping = 0;
 static W_process_info p_infos[P_NUMS]={0};
 static int p_status = 0;
+static char err[5][64]={"Cmd error", "Mkdir /tmp/wsht failed", "Open stream error", "none", "none"};
 time_t started_time = 0;
 /**@internal
  * @brief Handles SIGCHLD signals to avoid zombie processes
@@ -33,13 +34,15 @@ sigchld_handler(int s)
     pid_t rc;
     debug(LOG_INFO, "Handler for SIGCHLD called. Trying to reap a child");
     rc = waitpid(-1, &status, WNOHANG);
-    debug(LOG_INFO, "Handler for SIGCHLD reaped child PID %d", rc);
+    debug(LOG_INFO, "Handler for SIGCHLD reaped child PID %d, exit status is %d", rc, status >> 8);
+    //if child exit status is my type, report it
     p_status = 1;    
     for(i=0;i<P_NUMS;i++){
 	if(rc == p_infos[i].pid){
 	    debug(LOG_INFO, "Child %d Is Dead", rc);
             p_infos[i].pid = -1;
-	}
+	    p_infos[i].errcode = status >> 8;
+        }
     }
 }
 
@@ -179,19 +182,27 @@ main_loop(void){
             termination_handler(0);
         }
         pthread_detach(tid_ping);
+
+	//main loop: check children's status
 	while(1){
             sleep(30);
             debug(LOG_INFO, "I am the master, i am alive");
-            if(p_status){
+            //child exit unknown
+	    if(p_status == 1){
 		p_status=0;
     		for(i=0;i<P_NUMS;i++){
 		    if(-1 == p_infos[i].pid){
 	    	    	debug(LOG_INFO, "Child : %s", p_infos[i].cmd);
             	    	p_infos[i].pid = execute_without_waiting(p_infos[i].cmd, 0);
-		        sleep(10);
+		        if(p_infos[i].errcode>=100 && p_infos[i].errcode<105){
+			    debug(LOG_ERR, "FATAL: %s", err[p_infos[i].errcode-100]);
+			    p_infos[i].errcode=0;
+			}
+			sleep(10);
 		    }
     		}
 	    }
+	    
         }
     }
     else{
