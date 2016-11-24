@@ -39,6 +39,9 @@
 #define DEFAULT_CONFIGFILE SYSCONFDIR"/wsht.conf"
 #define DEFAULT_HTMLMSGFILE SYSCONFDIR"/wsht-msg.html"
 #endif
+//domon add it
+#define P_NUMS 4
+
 #define DEFAULT_DAEMON 1
 #define DEFAULT_DEBUGLEVEL LOG_INFO
 #define DEFAULT_HTTPDMAXCONN 10

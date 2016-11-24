@@ -12,11 +12,10 @@
 #include "wdctl_thread.h"
 #include "wsht_talk.h"
 #define MINIMUM_STARTED_TIME 1041379200 //from wifidog ping
-#define P_NUMS 4
 #define WSHT_DETECTOR_APP "./wsht_detector"
 
 static pthread_t tid_ping = 0;
-static W_process_info p_infos[P_NUMS]={0};
+W_process_info p_infos[P_NUMS]={0};
 static int p_status = 0;
 static char err[5][64]={"Cmd error", "Mkdir /tmp/wsht failed", "Open stream error", "none", "none"};
 time_t started_time = 0;
@@ -164,7 +163,7 @@ main_loop(void){
     //auth ok
     if(!authenticate_client(&conf)){
 	for(i=0;i<conf.cam_nums;i++){
-            safe_asprintf(&cmd, "%s %s -f %d", WSHT_DETECTOR_APP, conf.rtsp_url[i], conf.func);
+            safe_asprintf(&cmd, "%s %s -f %d -n %d", WSHT_DETECTOR_APP, conf.rtsp_url[i], conf.func, i);
 	    p_infos[i].pid = execute_without_waiting(cmd, 0);
             strcpy(p_infos[i].cmd, cmd);
 	}
@@ -185,7 +184,7 @@ main_loop(void){
 
 	//main loop: check children's status
 	while(1){
-            sleep(30);
+            sleep(60);
             debug(LOG_INFO, "I am the master, i am alive");
             //child exit unknown
 	    if(p_status == 1){
@@ -196,17 +195,18 @@ main_loop(void){
             	    	p_infos[i].pid = execute_without_waiting(p_infos[i].cmd, 0);
 		        if(p_infos[i].errcode>=100 && p_infos[i].errcode<105){
 			    debug(LOG_ERR, "FATAL: %s", err[p_infos[i].errcode-100]);
-			    p_infos[i].errcode=0;
 			}
-			sleep(10);
+		    sleep(60);
+		    }
+		    else if(p_infos[i].errcode !=0){
+			p_infos[i].errcode=0;
 		    }
     		}
 	    }
-	    
         }
     }
     else{
-        debug(LOG_ERR, "Auth myself failed");
+        debug(LOG_ERR, "Auth myself failed, please register yourself on the web page !");
     }
 	
 }

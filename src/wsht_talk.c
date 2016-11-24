@@ -13,8 +13,10 @@
 #include "pstring.h"
 #include "wsht_talk.h"
 #include "conf.h"
+#include "util.h"
 #include "debug.h"
 
+extern W_process_info p_infos[];
 
 static size_t
 AuthCallback(void *contents, size_t size, size_t nmemb, void *userp)
@@ -187,8 +189,10 @@ bool post_server_infos(const char* post_url, W_local_infos *infos, pstr_t *respo
 
   CURL *curl;
   CURLcode res;
+  int i;
   bool is_ok=false;
-
+  char buffer[64];
+  char name[16];
   curl_global_init(CURL_GLOBAL_ALL);  
 
   struct curl_httppost *formpost=NULL;
@@ -208,15 +212,50 @@ bool post_server_infos(const char* post_url, W_local_infos *infos, pstr_t *respo
   curl_formadd(&formpost,
                &lastptr,
                CURLFORM_COPYNAME, "filename",
-               CURLFORM_COPYCONTENTS, "infos.jpg",
+               CURLFORM_COPYCONTENTS, "info.jpg",
                CURLFORM_END);
+
+  //for multi camera to work together
+  for(i=1;i<P_NUMS;i++){
+    snprintf(buffer,sizeof(buffer)-1,"%sinfo%d.jpg",DEFAULT_IMAGE_PATH,i); 
+    if(access(buffer, NULL) == 0){
+      sprintf(name,"cam_image%d",i);
+      curl_formadd(&formpost,
+               &lastptr,
+               CURLFORM_COPYNAME, name,
+               CURLFORM_FILE, buffer,
+               CURLFORM_END);
+      sprintf(name,"info%d.jpg",i);
+      curl_formadd(&formpost,
+               &lastptr,
+               CURLFORM_COPYNAME, "filename",
+               CURLFORM_COPYCONTENTS, name,
+               CURLFORM_END);
+    }
+  }
 
   /* Fill in the submit field too, even if this is rarely needed */
   curl_formadd(&formpost,
                &lastptr,
-               CURLFORM_COPYNAME, "devide_id",
+               CURLFORM_COPYNAME, "device_id",
                CURLFORM_COPYCONTENTS, infos->device_id,
                CURLFORM_END);
+
+  snprintf(buffer,sizeof(buffer)-1,"%u",infos->rtsp_status); 
+  curl_formadd(&formpost,&lastptr,CURLFORM_COPYNAME, "rtsp_status", 
+	       CURLFORM_COPYCONTENTS, buffer,
+	       CURLFORM_END); 
+
+  
+  snprintf(buffer,sizeof(buffer)-1,"%u",infos->vpu_status); 
+  curl_formadd(&formpost,&lastptr,CURLFORM_COPYNAME, "vpu_status", 
+	       CURLFORM_COPYCONTENTS, buffer,
+	       CURLFORM_END); 
+  
+  snprintf(buffer,sizeof(buffer)-1,"%u",infos->detect_status); 
+  curl_formadd(&formpost,&lastptr,CURLFORM_COPYNAME, "detect_status", 
+	       CURLFORM_COPYCONTENTS, buffer,
+	       CURLFORM_END); 
 
   curl = curl_easy_init();
 
@@ -369,6 +408,7 @@ static void ping(void)
 {
     char request[MAX_BUF];
     FILE *fh;
+    int i;
     W_local_infos infos;
     unsigned long int sys_uptime = 0;
     unsigned int sys_memfree = 0;
@@ -389,6 +429,11 @@ static void ping(void)
     vpu_status=DEFAULT_VPU_STATUS;
     detect_status=DEFAULT_DETECT_STATUS;
     image_path=DEFAULT_INFO_IMAGE_PATH;
+    for(i=0;i<P_NUMS;i++){
+	if(-1 == p_infos[i].pid && p_infos[i].errcode == 102){
+	    rtsp_status ^= (1u << i);
+	}
+    }
 	
     debug(LOG_DEBUG, "Entering ping()");
     memset(request, 0, sizeof(request));
@@ -419,14 +464,14 @@ static void ping(void)
 
         fclose(fh);
     }
-	infos.sys_uptime = sys_uptime;
-	infos.sys_memfree = sys_memfree;
-	infos.sys_load = sys_load;
-	infos.rtsp_status = rtsp_status;
-	infos.vpu_status = vpu_status;
-	infos.detect_status = detect_status;
-	infos.device_id = config->gw_id;
-	infos.image_path = image_path;
+    infos.sys_uptime = sys_uptime;
+    infos.sys_memfree = sys_memfree;
+    infos.sys_load = sys_load;
+    infos.rtsp_status = rtsp_status;
+    infos.vpu_status = vpu_status;
+    infos.detect_status = detect_status;
+    infos.device_id = config->gw_id;
+    infos.image_path = image_path;
     snprintf(request, (sizeof(request) - 1),"http://%s%s%s",
         auth_server->authserv_hostname,
 	auth_server->authserv_path,	
@@ -501,19 +546,19 @@ void post_warning(void)
 
         fclose(fh);
     }
-	infos.sys_uptime = sys_uptime;
-	infos.sys_memfree = sys_memfree;
-	infos.sys_load = sys_load;
-	infos.rtsp_status = rtsp_status;
-	infos.vpu_status = vpu_status;
-	infos.detect_status = detect_status;
-	infos.device_id = config->gw_id;
-	infos.image_path = image_path;
+    infos.sys_uptime = sys_uptime;
+    infos.sys_memfree = sys_memfree;
+    infos.sys_load = sys_load;
+    infos.rtsp_status = rtsp_status;
+    infos.vpu_status = vpu_status;
+    infos.detect_status = detect_status;
+    infos.device_id = config->gw_id;
+    infos.image_path = image_path;
     snprintf(request, (sizeof(request) - 1),"http://%s%s%s",
         auth_server->authserv_hostname,
 	auth_server->authserv_path,	
         auth_server->authserv_ping_script_path_fragment);
-    debug(LOG_INFO, "Post infos === %s", request);    
+    debug(LOG_INFO, "Post warning === %s", request);    
 
     if(post_server_warning(request, &infos, response)){
         res = pstr_to_string(response);
