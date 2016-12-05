@@ -13,6 +13,7 @@
 #include "wsht_talk.h"
 #define MINIMUM_STARTED_TIME 1041379200 //from wifidog ping
 #define WSHT_DETECTOR_APP "./wsht_detector"
+#define WORK_DIR "/usr/local/wsht/app"
 
 static pthread_t tid_ping = 0;
 W_process_info p_infos[P_NUMS]={0};
@@ -52,10 +53,14 @@ sigchld_handler(int s)
 void
 termination_handler(int s)
 {
-	pthread_t self = pthread_self();
-	if (tid_ping && self != tid_ping) {
+    int i;
+    pthread_t self = pthread_self();
+    if (tid_ping && self != tid_ping) {
         debug(LOG_INFO, "Explicitly killing the ping thread");
         pthread_kill(tid_ping, SIGKILL);
+    }
+    for(i=0;i<P_NUMS;i++){
+	if(p_infos[i].pid)kill(p_infos[i].pid, SIGKILL);
     }
     debug(LOG_NOTICE, "Exiting...");
     exit(s == 0 ? 1 : 0);
@@ -137,8 +142,9 @@ main_loop(void){
     }
 
     /* save the pid file if needed */
-    if ((!config) && (!config->pidfile))
+    if ((config) && (config->pidfile)){
         save_pid_file(config->pidfile);
+    }
 
     /* If we don't have the Gateway IP address, get it. Can't fail. */
     if (!config->gw_address) {
@@ -207,6 +213,7 @@ main_loop(void){
     }
     else{
         debug(LOG_ERR, "Auth myself failed, please register yourself on the web page !");
+	sleep(5);
     }
 	
 }
@@ -214,6 +221,10 @@ main_loop(void){
 int main(int argc, char **argv){
 
     s_config *config = config_get_config();
+    
+    int ret=chdir(WORK_DIR);
+    if(ret){debug(LOG_ERR, "Chdir failed");exit(1);}
+    
     config_init();
 
     parse_commandline(argc, argv);
@@ -231,7 +242,7 @@ int main(int argc, char **argv){
         case 0:                /* child */
             setsid();
             main_loop();
-            break;
+	    break;
 
         default:               /* parent */
             exit(0);

@@ -1,0 +1,70 @@
+#!/bin/sh -e
+### BEGIN INIT INFO
+# Provides:          wshtd
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs
+# Should-Start:      $syslog
+# Should-Stop:       $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start or stop the wshtd daemon.
+### END INIT INFO
+
+DAEMON=/usr/local/wsht/app/wsht_client
+OPTIONS="-p /tmp/wshtd.pid"
+
+[ -x $DAEMON -a -e /usr/local/wsht/app/wsht.conf ] || exit 0
+# prev cmd
+#[ -e /etc/default/openbsd-inetd ] && . /etc/default/openbsd-inetd
+
+. /lib/lsb/init-functions
+
+checknoservices () {
+    client=`pgrep wsht_client`
+    sons=`pgrep wsht_detector`
+    if [ ! -z $client ]; then
+	killall wsht_client
+    fi
+    if [ ! -z $sons ]; then
+        killall wsht_detector
+    fi
+}
+
+case "$1" in
+    start)
+	log_daemon_msg "Starting wsht client service" "wshtd"
+	start-stop-daemon --start --quiet --pidfile /tmp/wshtd.pid \
+	    --oknodo --exec $DAEMON -- $OPTIONS
+	log_end_msg 0
+	;;
+    stop)
+	log_daemon_msg "Stopping wsht client service" "wshtd"
+	start-stop-daemon --stop --quiet --pidfile /tmp/wshtd.pid \
+	    --oknodo
+	sleep 1
+	checknoservices
+        log_end_msg 0
+	;;
+    restart)
+	checkportmap
+	log_daemon_msg "Restarting wsht client service" "wshtd"
+	start-stop-daemon --stop --quiet --pidfile /tmp/wshtd.pid \
+	    --oknodo
+	sleep 1
+	checknoservices
+	sleep 1
+	start-stop-daemon --start --quiet --pidfile /tmp/wshtd.pid \
+	    --exec $DAEMON -- $OPTIONS
+	log_end_msg 0
+	;;
+    status)
+	status_of_proc -p /tmp/wshtd.pid $DAEMON wsht_client && exit 0 || exit $?
+	;;
+    *)
+	echo "Usage: /etc/init.d/wshtd {start|stop|restart|status}"
+	exit 2
+	;;
+esac
+
+exit 0
+

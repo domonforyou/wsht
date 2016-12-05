@@ -5,7 +5,7 @@
 #define DEFAULT_VPU_STATUS 0x0F
 #define DEFAULT_DETECT_STATUS 0x0F
 #define DEFAULT_IMAGE_PATH "/tmp/wsht/"
-#define DEFAULT_INFO_IMAGE_PATH "/tmp/wsht/info.jpg"
+#define DEFAULT_INFO_IMAGE_PATH "/tmp/wsht/info0.jpg"
 #define DEFAULT_WARNING_IMAGE_PATH "/tmp/wsht/warning.jpg"
 
 typedef enum{

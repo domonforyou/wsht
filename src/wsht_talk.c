@@ -212,7 +212,7 @@ bool post_server_infos(const char* post_url, W_local_infos *infos, pstr_t *respo
   curl_formadd(&formpost,
                &lastptr,
                CURLFORM_COPYNAME, "filename",
-               CURLFORM_COPYCONTENTS, "info.jpg",
+               CURLFORM_COPYCONTENTS, "info0.jpg",
                CURLFORM_END);
 
   //for multi camera to work together

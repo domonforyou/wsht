@@ -203,7 +203,7 @@ wdctl_warning(void)
     // -1: need some space for \0!
     while ((len = read(sock, buffer, sizeof(buffer) - 1)) > 0) {
         buffer[len] = '\0';
-        fprintf(stdout, "%s", buffer);
+        fprintf(stdout, "Warning is sent --- %s\n", buffer);
     }
 
     shutdown(sock, 2);
